@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Truco de las 21 Cartas</title>
+<style>
+  :root{--bg:#404040;--cbg:#fff;--cbrd:#bbb;--rojo:#cc1111;--ntxt:#111;--ui:#fff;--sec:#bbb;--dorso:#1a1a7a;--dorsoL:#3a3acc;--oro:#ffd84d;--btnV:#2a6e40;--btnA:#1e4e8c;--btnR:#8c1e1e;}
+  .dk{--bg:#141414;--cbg:#272727;--cbrd:#444;--ntxt:#ddd;--dorso:#0e0e40;--dorsoL:#2828aa;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);transition:background .3s;display:flex;justify-content:center;min-height:100vh;}
+  #W{background:var(--bg);color:var(--ui);font-family:Georgia,serif;min-height:100vh;padding:10px;transition:background .3s;display:flex;flex-direction:column;align-items:center;width:100%;max-width:900px;position:relative;overflow:hidden;}
+  .sc{display:none;flex-direction:column;align-items:center;width:100%;flex:1;}
+  .sc.on{display:flex;}
+  .btn{padding:11px 22px;border-radius:8px;border:1.5px solid rgba(255,255,255,.35);color:#fff;font-family:Georgia,serif;font-size:13px;cursor:pointer;margin:5px;min-width:160px;transition:filter .15s;}
+  .btn:active{transform:scale(.95);} .btn:hover{filter:brightness(1.2);}
+  .bg{background:var(--btnV);} .bb{background:var(--btnA);} .br{background:var(--btnR);}
+  .inf{font-size:12px;color:var(--sec);text-align:center;margin:5px 0;min-height:20px;}
+  .inf b{color:var(--ui);}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;width:100%;margin:5px 0;}
+  .carta{aspect-ratio:5/7;border-radius:5px;border:1px solid var(--cbrd);background:var(--cbg);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:2px;font-size:clamp(7px,1.4vw,12px);position:relative;overflow:hidden;}
+  .t{align-self:flex-start;line-height:1.1;font-weight:bold;}
+  .m{font-size:clamp(12px,3vw,24px);}
+  .b{align-self:flex-end;transform:rotate(180deg);line-height:1.1;font-weight:bold;}
+  .r .t,.r .m,.r .b{color:var(--rojo);}
+  .n .t,.n .m,.n .b{color:var(--ntxt);}
+  .dorso{background:var(--dorso)!important;border-color:var(--dorsoL)!important;}
+  .dorso::after{content:'';position:absolute;inset:3px;border:1px solid var(--dorsoL);border-radius:3px;background:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(80,80,220,.2) 3px,rgba(80,80,220,.2) 4px);}
+  .mwrap{display:flex;justify-content:center;gap:clamp(6px,2.5vw,30px);width:100%;margin:8px 0;}
+  .mont{display:flex;flex-direction:column;align-items:center;flex:1;max-width:160px;cursor:pointer;user-select:none;}
+  .mlbl{font-size:11px;color:var(--sec);margin-bottom:4px;text-align:center;}
+  .mont.sel .mlbl{color:var(--oro);font-weight:bold;}
+  .mtop{width:80px;aspect-ratio:5/7;border-radius:5px;border:1px solid var(--cbrd);background:var(--cbg);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:2px;font-size:10px;position:relative;overflow:hidden;}
+  .mtop .t{align-self:flex-start;line-height:1.1;font-weight:bold;}
+  .mtop .m{font-size:18px;}
+  .mtop .b{align-self:flex-end;transform:rotate(180deg);line-height:1.1;font-weight:bold;}
+  .mtop.r .t,.mtop.r .m,.mtop.r .b{color:var(--rojo);}
+  .mtop.n .t,.mtop.n .m,.mtop.n .b{color:var(--ntxt);}
+  .mont.sel .mtop{outline:2.5px solid var(--oro);}
+  .mlista{display:none;flex-direction:column;gap:2px;width:80px;margin-top:4px;max-height:180px;overflow-y:auto;}
+  .mont.abierto .mlista{display:flex;}
+  .mrow{background:var(--cbg);border-radius:3px;padding:2px 5px;font-size:11px;font-weight:bold;text-align:center;border:1px solid var(--cbrd);}
+  .mrow.r{color:var(--rojo);} .mrow.n{color:var(--ntxt);}
+  .foot{padding:6px 0 14px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .hint{font-size:11px;color:#999;text-align:center;}
+  #mezc{position:absolute;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);}
+  #mezc canvas{position:absolute;inset:0;width:100%;height:100%;}
+  #mztxt{position:relative;z-index:2;font-size:clamp(20px,5vw,34px);font-weight:bold;color:#fff;pointer-events:none;transition:opacity .4s;}
+  /* Canvas palpitacion cuadricula */
+  #cvGrid{position:absolute;top:0;left:0;width:100%;pointer-events:none;z-index:1;}
+  #s1{position:relative;}
+  #gI{position:relative;z-index:2;}
+  /* Animaciones carta revelada */
+  @keyframes levitar{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes brilloRev{0%,100%{box-shadow:0 0 10px 4px var(--oro),0 0 28px 8px rgba(255,216,77,.3)}50%{box-shadow:0 0 22px 10px var(--oro),0 0 48px 16px rgba(255,216,77,.5)}}
+  @keyframes subirCarta{0%{transform:translateY(60px) scale(.7);opacity:0}60%{transform:translateY(-14px) scale(1.08);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}
+  .carta-sube{animation:subirCarta .7s cubic-bezier(.22,1,.36,1) forwards;}
+  .carta-levita{animation:levitar 2.6s ease-in-out infinite,brilloRev 2.6s ease-in-out infinite;outline:3px solid var(--oro);border-radius:7px;}
+</style>
+</head>
+<body>
+<div id="W">
+  <div id="mezc"><canvas id="cvMezc"></canvas><div id="mztxt">Mezclando...</div></div>
+
+  <!-- INICIO -->
+  <div id="s0" class="sc on">
+    <div style="font-size:clamp(22px,5vw,38px);font-weight:bold;text-align:center;margin:28px 0 8px;">Truco de las<br>21 Cartas</div>
+    <div style="font-size:12px;color:var(--sec);margin-bottom:22px;text-align:center;">Piensa en una carta. El programa la adivinará.</div>
+    <button class="btn bg" id="btnCom">COMENZAR</button>
+    <button class="btn bb" id="btnTema">Modo oscuro: OFF</button>
+  </div>
+
+  <!-- CUADRICULA -->
+  <div id="s1" class="sc">
+    <div class="inf">Memoriza una carta y recuerda en qué <b>columna</b> está</div>
+    <div class="grid" id="gI"></div>
+    <div class="foot"><button class="btn bb" id="btnRep">REPARTIR CARTAS</button></div>
+  </div>
+
+  <!-- REPARTIENDO -->
+  <div id="s2" class="sc">
+    <div class="inf" id="iR">Repartiendo...</div>
+    <div class="mwrap" id="mR"></div>
+  </div>
+
+  <!-- SELECCION -->
+  <div id="s3" class="sc">
+    <div class="inf" id="iS">Toca el montón que contiene tu carta</div>
+    <div class="mwrap" id="mS"></div>
+    <div class="foot">
+      <div class="hint" id="hS">Toca un montón para verlo</div>
+      <button class="btn bg" id="btnCont" style="display:none">CONTINUAR</button>
+    </div>
+  </div>
+
+  <!-- FINAL -->
+  <div id="s4" class="sc">
+    <div class="inf" id="iF">Cartas boca abajo</div>
+    <div class="grid" id="gF"></div>
+    <div class="foot">
+      <button class="btn br" id="btnReveal">ADIVINAR CARTA</button>
+      <button class="btn bb" id="btnInicio" style="display:none">VOLVER AL INICIO</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var P=[["♠",0],["♥",1],["♦",1],["♣",0]];
+var V=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+var mano=[],monts=[[],[],[]],turno=0,mazo=[],mFinal=[];
+var exp=-1,sel=-1,dark=0;
+
+// Loop de animacion global
+var tiempoInicio=performance.now();
+var rafGrid=null;
+
+function getTiempo(){ return (performance.now()-tiempoInicio)/1000; }
+
+function show(id){
+  ["s0","s1","s2","s3","s4"].forEach(function(s){document.getElementById(s).classList.remove("on");});
+  document.getElementById(id).classList.add("on");
+  if(id!=="s1" && rafGrid){ cancelAnimationFrame(rafGrid); rafGrid=null; }
+}
+
+function mkC(v,p,r,cls){
+  var d=document.createElement("div");
+  d.className="carta "+(r?"r":"n")+(cls?" "+cls:"");
+  d.innerHTML='<span class="t">'+v+"<br>"+p+'</span><span class="m">'+p+'</span><span class="b">'+v+"<br>"+p+"</span>";
+  return d;
+}
+function mkD(){var d=document.createElement("div");d.className="carta dorso";return d;}
+
+// ── PALPITACION: igual que Python ─────────────────────────────────────────────
+// alpha = 155 + 100 * (0.5 + 0.5 * sin(tiempo * 1.8 + idx * 0.28))
+// Traduce a opacidad: minimo ~0.61 maximo 1.0, velocidad 1.8 rad/s
+// periodo = 2*PI/1.8 ≈ 3.49s, cada carta desfasada idx*0.28 rad
+
+function loopPalpitacion(){
+  var cartas=document.getElementById("gI").children;
+  if(!cartas||cartas.length===0){rafGrid=requestAnimationFrame(loopPalpitacion);return;}
+  var t=getTiempo();
+  for(var i=0;i<cartas.length;i++){
+    // alpha entre 155 y 255, igual que el codigo Python
+    var alpha = 155 + 100*(0.5 + 0.5*Math.sin(t*1.8 + i*0.28));
+    cartas[i].style.opacity = (alpha/255).toFixed(3);
+  }
+  rafGrid=requestAnimationFrame(loopPalpitacion);
+}
+
+document.getElementById("btnTema").onclick=function(){
+  dark=1-dark;
+  document.getElementById("W").classList.toggle("dk",dark);
+  document.body.classList.toggle("dk",dark);
+  this.textContent="Modo oscuro: "+(dark?"ON":"OFF");
+};
+
+document.getElementById("btnCom").onclick=function(){
+  var pool=[];
+  for(var i=0;i<P.length;i++) for(var j=0;j<V.length;j++) pool.push({v:V[j],p:P[i][0],r:P[i][1]});
+  for(var k=pool.length-1;k>0;k--){var q=Math.floor(Math.random()*(k+1));var t=pool[k];pool[k]=pool[q];pool[q]=t;}
+  mano=pool.slice(0,21); turno=0; mazo=mano.slice(); monts=[[],[],[]]; exp=-1; sel=-1;
+  var g=document.getElementById("gI"); g.innerHTML="";
+  for(var i=0;i<mano.length;i++) g.appendChild(mkC(mano[i].v,mano[i].p,mano[i].r));
+  tiempoInicio=performance.now();
+  show("s1");
+  if(rafGrid) cancelAnimationFrame(rafGrid);
+  rafGrid=requestAnimationFrame(loopPalpitacion);
+};
+
+document.getElementById("btnRep").onclick=function(){startRep();};
+
+function startRep(){
+  monts=[[],[],[]]; exp=-1; sel=-1;
+  document.getElementById("iR").innerHTML="Repartiendo... <b>(ronda "+(turno+1)+" de 3)</b>";
+  renderRep(); show("s2");
+  var idx=0;
+  var iv=setInterval(function(){
+    if(idx>=mazo.length){clearInterval(iv);setTimeout(startSel,500);return;}
+    monts[idx%3].push(mazo[idx]); idx++; renderRep();
+  },160);
+}
+
+function renderRep(){
+  var w=document.getElementById("mR"); w.innerHTML="";
+  var lb=["Izquierda","Centro","Derecha"];
+  for(var i=0;i<3;i++){
+    var mn=monts[i];
+    var dv=document.createElement("div"); dv.className="mont";
+    var l=document.createElement("div"); l.className="mlbl"; l.textContent=lb[i]; dv.appendChild(l);
+    if(mn.length>0){
+      var c=mn[mn.length-1];
+      var tp=document.createElement("div"); tp.className="mtop "+(c.r?"r":"n");
+      tp.innerHTML='<span class="t">'+c.v+"<br>"+c.p+'</span><span class="m">'+c.p+'</span><span class="b">'+c.v+"<br>"+c.p+"</span>";
+      dv.appendChild(tp);
+    } else {
+      var vv=document.createElement("div"); vv.className="mtop"; vv.style.cssText="background:transparent;border:2px dashed #666;"; dv.appendChild(vv);
+    }
+    w.appendChild(dv);
+  }
+}
+
+function startSel(){
+  exp=-1; sel=-1;
+  document.getElementById("hS").textContent="Toca un montón para verlo";
+  document.getElementById("btnCont").style.display="none";
+  document.getElementById("iS").innerHTML="Ronda <b>"+(turno+1)+"/3</b> — Toca el montón que tiene tu carta";
+  renderSel(); show("s3");
+}
+
+function renderSel(){
+  var lb=["Izquierda","Centro","Derecha"];
+  var w=document.getElementById("mS"); w.innerHTML="";
+  for(var i=0;i<3;i++){
+    (function(idx){
+      var mn=monts[idx];
+      var dv=document.createElement("div");
+      dv.className="mont"+(exp===idx?" abierto sel":"");
+      var l=document.createElement("div"); l.className="mlbl"; l.textContent=lb[idx]; dv.appendChild(l);
+      if(mn.length>0){
+        var c=mn[mn.length-1];
+        var tp=document.createElement("div"); tp.className="mtop "+(c.r?"r":"n");
+        tp.innerHTML='<span class="t">'+c.v+"<br>"+c.p+'</span><span class="m">'+c.p+'</span><span class="b">'+c.v+"<br>"+c.p+"</span>";
+        dv.appendChild(tp);
+      }
+      var lista=document.createElement("div"); lista.className="mlista";
+      for(var j=0;j<mn.length;j++){
+        var rw=document.createElement("div"); rw.className="mrow "+(mn[j].r?"r":"n");
+        rw.textContent=mn[j].v+" "+mn[j].p; lista.appendChild(rw);
+      }
+      dv.appendChild(lista);
+      dv.onclick=function(e){
+        e.stopPropagation();
+        exp=(exp===idx)?-1:idx; sel=(exp>=0)?exp:-1;
+        if(sel>=0){document.getElementById("hS").textContent="Seleccionado: "+lb[sel];document.getElementById("btnCont").style.display="inline-block";}
+        else{document.getElementById("hS").textContent="Toca un montón para verlo";document.getElementById("btnCont").style.display="none";}
+        renderSel();
+      };
+      w.appendChild(dv);
+    })(i);
+  }
+}
+
+document.getElementById("btnCont").onclick=function(){
+  if(sel<0) return;
+  var s=sel; var otros=[];
+  for(var i=0;i<3;i++) if(i!==s) otros.push(monts[i]);
+  mazo=otros[0].concat(monts[s]).concat(otros[1]);
+  turno++;
+  if(turno>=3){mFinal=mazo.slice().reverse();animMezc();}
+  else startRep();
+};
+
+function animMezc(){
+  var Wdiv=document.getElementById("W");
+  var mezc=document.getElementById("mezc");
+  var cv=document.getElementById("cvMezc");
+  var cw=Wdiv.offsetWidth||360, ch=Wdiv.offsetHeight||500;
+  cv.width=cw; cv.height=ch; mezc.style.display="flex";
+  var ctx=cv.getContext("2d");
+  var cards=[];
+  for(var k=0;k<28;k++){
+    var c=mano[Math.floor(Math.random()*21)];
+    cards.push({x:Math.random()*cw,y:Math.random()*ch,vx:(Math.random()-.5)*13,vy:(Math.random()-.5)*11,a:Math.random()*360,va:(Math.random()-.5)*16,al:1,b:Math.random()>.5,v:c.v,p:c.p,r:c.r});
+  }
+  var txtEl=document.getElementById("mztxt");
+  txtEl.style.opacity="0"; setTimeout(function(){txtEl.style.opacity="1";},100);
+  var t0=null, DUR=3000;
+  function fr(ts){
+    if(!t0) t0=ts; var el=ts-t0;
+    ctx.clearRect(0,0,cw,ch);
+    for(var i=0;i<cards.length;i++){
+      var c=cards[i];
+      c.x+=c.vx; c.y+=c.vy; c.a+=c.va;
+      if(c.x<-60||c.x>cw+60) c.vx*=-1;
+      if(c.y<-90||c.y>ch+90) c.vy*=-1;
+      if(el>DUR*.6) c.al=Math.max(0,c.al-.025);
+      ctx.save(); ctx.globalAlpha=c.al;
+      ctx.translate(c.x,c.y); ctx.rotate(c.a*Math.PI/180);
+      var w=50,h=70;
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(-w/2,-h/2,w,h,5); else ctx.rect(-w/2,-h/2,w,h);
+      ctx.fillStyle=c.b?(dark?"#0e0e40":"#1a1a7a"):(dark?"#272727":"#fff"); ctx.fill();
+      ctx.strokeStyle=c.b?(dark?"#2828aa":"#3a3acc"):(dark?"#555":"#bbb"); ctx.lineWidth=1; ctx.stroke();
+      if(!c.b){ctx.fillStyle=c.r?"#cc1111":(dark?"#ddd":"#111");ctx.font="bold 12px Georgia";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(c.v+c.p,0,0);}
+      ctx.restore();
+    }
+    if(el<DUR) requestAnimationFrame(fr);
+    else{txtEl.style.opacity="0";setTimeout(function(){mezc.style.display="none";showFinal();},350);}
+  }
+  requestAnimationFrame(fr);
+}
+
+function showFinal(){
+  var g=document.getElementById("gF"); g.innerHTML="";
+  for(var i=0;i<mFinal.length;i++) g.appendChild(mkD());
+  document.getElementById("iF").textContent="Cartas boca abajo";
+  document.getElementById("btnReveal").style.display="inline-block";
+  document.getElementById("btnInicio").style.display="none";
+  show("s4");
+}
+
+document.getElementById("btnReveal").onclick=function(){
+  var g=document.getElementById("gF");
+  var c=mFinal[10];
+  var nueva=mkC(c.v,c.p,c.r);
+  nueva.classList.add("carta-sube");
+  g.replaceChild(nueva,g.children[10]);
+  setTimeout(function(){nueva.classList.remove("carta-sube");nueva.classList.add("carta-levita");},750);
+  document.getElementById("iF").innerHTML='<b style="color:var(--oro);font-size:15px;">✨ Tu carta es: '+c.v+' '+c.p+'</b>';
+  this.style.display="none";
+  document.getElementById("btnInicio").style.display="inline-block";
+};
+
+document.getElementById("btnInicio").onclick=function(){show("s0");};
+</script>
+</body>
+</html>
